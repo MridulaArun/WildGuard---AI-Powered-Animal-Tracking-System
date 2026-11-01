@@ -6,11 +6,10 @@ Wildlife teams often need to combine animal location, health, habitat, equipment
 
 ## Team
 
-| Name | Register number |
-|---|---|
-| TODO - add team member name | TODO - add register number |
+Divya Keerthana S 25BCE5741
+Kavya Sri K 25BCE5346
+Mridula Arun Kumar 25BCE5804
 
-Add one row per team member before submission. Team details were not provided.
 
 ## Functional features
 
@@ -106,7 +105,7 @@ The training step requires at least 8 labeled records. The API health check is a
 
 ## Database tables and relationships
 
-The final SQL script creates **13 tables** (despite the other schema file's header saying 14) and seeds 20 sample rows in each table:
+The final SQL script creates **13 tables** and seeds 20 sample rows in each table:
 
 | Table | Purpose |
 |---|---|
@@ -130,7 +129,6 @@ The seeded dataset includes Indian wildlife species, reserve examples, GPS recor
 
 ## Screenshots / implemented-feature summary
 
-No screenshots are included yet. Capture the Overview, Live tracking, Alert centre, Animals, AI predictions, and Collar health screens and add the image paths here before submission. The feature list above is a brief summary of the implemented interface.
 
 ## Test instructions
 
@@ -139,8 +137,6 @@ No screenshots are included yet. Capture the Overview, Live tracking, Alert cent
 3. Check that the dashboard opens in demo mode and navigate through its pages.
 4. With a configured database, check `http://localhost:4000/api/health` and `http://localhost:5173`; confirm the header state and animal list.
 5. For the optional Python service, check `/health`, then use `/docs` to call prediction endpoints. Training needs at least 8 labeled database records.
-
-There is no automated test script currently defined in `package.json`.
 
 ## Known limitations
 
@@ -152,4 +148,3 @@ There is no automated test script currently defined in `package.json`.
 
 ## YouTube demonstration
 
-Not uploaded yet. Add the public or unlisted YouTube URL here before submission.
