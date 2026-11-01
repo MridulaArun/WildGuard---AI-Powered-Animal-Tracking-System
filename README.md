@@ -105,7 +105,7 @@ The training step requires at least 8 labeled records. The API health check is a
 
 ## Database tables and relationships
 
-The final SQL script creates **13 tables** and seeds 20 sample rows in each table:
+The final SQL script creates **14 tables**. It seeds 20 sample rows in each of the 13 wildlife-domain tables; `Audit_Log` starts empty and records later changes:
 
 | Table | Purpose |
 |---|---|
@@ -122,8 +122,11 @@ The final SQL script creates **13 tables** and seeds 20 sample rows in each tabl
 | `Device` | Animal collar/device model, battery, and status |
 | `Habitat_Zone` | Reserve habitats, vegetation type, and boundaries |
 | `Health_Record` | Animal checkups, weight, and health status |
+| `Audit_Log` | Append-only history of inserts, updates, and deletes on the 13 domain tables, including the database role, timestamp, record key, and old/new row values |
 
 Key relationships: `Animal` references `Species` and `Reserve`; GPS, health, and device records reference animals; risk events reference animals, GPS records, and risk zones; predictions reference animals and optionally GPS records; alerts reference exactly one risk event or prediction; and alert assignments connect alerts to rangers. Reserves also own risk zones, habitat zones, and rangers.
+
+`Audit_Log` uses JSONB snapshots and stores the affected table and primary-key value as text so it can audit records across different tables without a polymorphic foreign key. Database triggers capture subsequent row changes; the initial sample-data load is intentionally not logged. The log does not identify an application user unless the database connection uses a user-specific role.
 
 The seeded dataset includes Indian wildlife species, reserve examples, GPS records, risk zones/events, predictions, alerts, ranger assignments, device readings, habitats, and health records. These records are examples, not current field telemetry.
 
@@ -135,7 +138,7 @@ The seeded dataset includes Indian wildlife species, reserve examples, GPS recor
 1. Run `npm run build` from the project root; the Vite production build should complete.
 2. Run `npm run dev` and open <http://localhost:5173>.
 3. Check that the dashboard opens in demo mode and navigate through its pages.
-4. With a configured database, check `http://localhost:4000/api/health` and `http://localhost:5173`; confirm the header state and animal list.
+4. With a configured database, check `http://localhost:4000/api/health` and `http://localhost:5173`; confirm the header state and animal list. Make a test change to a domain table and verify an audit row appears in `Audit_Log`.
 5. For the optional Python service, check `/health`, then use `/docs` to call prediction endpoints. Training needs at least 8 labeled database records.
 
 ## Known limitations
@@ -147,4 +150,3 @@ The seeded dataset includes Indian wildlife species, reserve examples, GPS recor
 - Demo-mode actions do not persist to PostgreSQL. Do not treat dashboard/model output as field advice.
 
 ## YouTube demonstration
-

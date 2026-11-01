@@ -16,7 +16,7 @@ CREATE EXTENSION IF NOT EXISTS postgis;
 -- Re-runnable reset: drop only our own tables (leaves PostGIS and the
 -- public schema itself untouched), children first.
 DROP TABLE IF EXISTS
-    Alert_Assignment, Alert, Prediction, Animal_Risk_Event, Health_Record,
+    Audit_Log, Alert_Assignment, Alert, Prediction, Animal_Risk_Event, Health_Record,
     Habitat_Zone, Device, Ranger, Risk_Zone, GPS_Tracking, Animal,
     Reserve, Species
 CASCADE;
@@ -155,6 +155,17 @@ CREATE TABLE Health_Record (
     health_status VARCHAR(20) NOT NULL
         CHECK (health_status IN ('healthy', 'injured', 'sick', 'critical', 'deceased')),
     notes         TEXT
+);
+
+CREATE TABLE Audit_Log (
+    audit_id    BIGSERIAL PRIMARY KEY,
+    table_name  TEXT NOT NULL,
+    record_id   TEXT NOT NULL,
+    operation   TEXT NOT NULL CHECK (operation IN ('INSERT', 'UPDATE', 'DELETE')),
+    changed_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    changed_by  TEXT NOT NULL DEFAULT SESSION_USER,
+    old_data    JSONB,
+    new_data    JSONB
 );
  
 -- ---------- INDEXES ----------
@@ -489,11 +500,89 @@ SELECT setval(pg_get_serial_sequence('habitat_zone', 'habitat_id'), (SELECT MAX(
 SELECT setval(pg_get_serial_sequence('health_record', 'record_id'), (SELECT MAX(record_id) FROM health_record));
  
 COMMIT;
- 
+
+-- ---------- AUDIT LOG ----------
+-- Install row-level audit triggers after loading the sample data so initial
+-- seed records do not appear as operational changes in the audit history.
+CREATE OR REPLACE FUNCTION audit_row_changes()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    old_row JSONB;
+    new_row JSONB;
+    row_id TEXT;
+BEGIN
+    IF TG_OP = 'INSERT' THEN
+        new_row := to_jsonb(NEW);
+        row_id := new_row ->> TG_ARGV[0];
+    ELSIF TG_OP = 'UPDATE' THEN
+        old_row := to_jsonb(OLD);
+        new_row := to_jsonb(NEW);
+        row_id := new_row ->> TG_ARGV[0];
+    ELSE
+        old_row := to_jsonb(OLD);
+        row_id := old_row ->> TG_ARGV[0];
+    END IF;
+
+    INSERT INTO Audit_Log (table_name, record_id, operation, changed_by, old_data, new_data)
+    VALUES (TG_TABLE_NAME, row_id, TG_OP, SESSION_USER, old_row, new_row);
+
+    IF TG_OP = 'DELETE' THEN
+        RETURN OLD;
+    END IF;
+    RETURN NEW;
+END;
+$$;
+
+CREATE TRIGGER audit_species_changes
+AFTER INSERT OR UPDATE OR DELETE ON Species
+FOR EACH ROW EXECUTE FUNCTION audit_row_changes('species_id');
+CREATE TRIGGER audit_reserve_changes
+AFTER INSERT OR UPDATE OR DELETE ON Reserve
+FOR EACH ROW EXECUTE FUNCTION audit_row_changes('reserve_id');
+CREATE TRIGGER audit_animal_changes
+AFTER INSERT OR UPDATE OR DELETE ON Animal
+FOR EACH ROW EXECUTE FUNCTION audit_row_changes('animal_id');
+CREATE TRIGGER audit_gps_tracking_changes
+AFTER INSERT OR UPDATE OR DELETE ON GPS_Tracking
+FOR EACH ROW EXECUTE FUNCTION audit_row_changes('tracking_id');
+CREATE TRIGGER audit_risk_zone_changes
+AFTER INSERT OR UPDATE OR DELETE ON Risk_Zone
+FOR EACH ROW EXECUTE FUNCTION audit_row_changes('zone_id');
+CREATE TRIGGER audit_risk_event_changes
+AFTER INSERT OR UPDATE OR DELETE ON Animal_Risk_Event
+FOR EACH ROW EXECUTE FUNCTION audit_row_changes('event_id');
+CREATE TRIGGER audit_prediction_changes
+AFTER INSERT OR UPDATE OR DELETE ON Prediction
+FOR EACH ROW EXECUTE FUNCTION audit_row_changes('prediction_id');
+CREATE TRIGGER audit_alert_changes
+AFTER INSERT OR UPDATE OR DELETE ON Alert
+FOR EACH ROW EXECUTE FUNCTION audit_row_changes('alert_id');
+CREATE TRIGGER audit_ranger_changes
+AFTER INSERT OR UPDATE OR DELETE ON Ranger
+FOR EACH ROW EXECUTE FUNCTION audit_row_changes('ranger_id');
+CREATE TRIGGER audit_assignment_changes
+AFTER INSERT OR UPDATE OR DELETE ON Alert_Assignment
+FOR EACH ROW EXECUTE FUNCTION audit_row_changes('assignment_id');
+CREATE TRIGGER audit_device_changes
+AFTER INSERT OR UPDATE OR DELETE ON Device
+FOR EACH ROW EXECUTE FUNCTION audit_row_changes('device_id');
+CREATE TRIGGER audit_habitat_changes
+AFTER INSERT OR UPDATE OR DELETE ON Habitat_Zone
+FOR EACH ROW EXECUTE FUNCTION audit_row_changes('habitat_id');
+CREATE TRIGGER audit_health_record_changes
+AFTER INSERT OR UPDATE OR DELETE ON Health_Record
+FOR EACH ROW EXECUTE FUNCTION audit_row_changes('record_id');
+
+CREATE INDEX idx_audit_log_table_record_time
+    ON Audit_Log (table_name, record_id, changed_at DESC);
+
 -- 1. BASIC SELECT
 SELECT * FROM Species;
 SELECT * FROM Animal;
 SELECT * FROM Health_Record;
+SELECT * FROM Audit_Log ORDER BY changed_at DESC;
 SELECT animal_id, tag_id, sex, birth_year, status FROM Animal;
 
 -- 2. WHERE / FILTERING
@@ -559,5 +648,3 @@ SELECT zone_id, zone_name, ST_Area(boundary::geography) AS area_sq_m FROM Risk_Z
 SELECT habitat_id, habitat_name, ST_Area(boundary::geography) AS area_sq_m FROM Habitat_Zone;
 SELECT g.tracking_id, g.animal_id, rz.zone_name FROM GPS_Tracking g JOIN Risk_Zone rz ON ST_Within(g.location, rz.boundary);
 SELECT g.tracking_id, g.animal_id, rz.zone_name, ST_Distance(g.location::geography, rz.boundary::geography) AS distance_m FROM GPS_Tracking g CROSS JOIN Risk_Zone rz WHERE ST_DWithin(g.location::geography, rz.boundary::geography, 1000);
-
-
