@@ -131,6 +131,15 @@ Key relationships: `Animal` references `Species` and `Reserve`; GPS, health, and
 The seeded dataset includes Indian wildlife species, reserve examples, GPS records, risk zones/events, predictions, alerts, ranger assignments, device readings, habitats, and health records. These records are examples, not current field telemetry.
 
 ## Screenshots / implemented-feature summary
+Implemented features:
+1. An overview dashboard providing statistics of the reserves, animals, alerts, and assignments.
+2. A live tracking dashboard with a map depicting the animals' location as coordinates.
+3. An 'alert center' tracking all the alerts, which rangers they are sent to, and their status.
+4. An 'animal registry' which displays all the details of the animals, including tag_id, health status, last known location with timestamp.
+5. A ranger dashboard with the ranger workload, and the status of their assignments.
+6. A reserve overview dashboard which outlines the reserves and zones present in them.
+7. A 'collar health' dashboard, showing the battery level and status of the collar.
+8. A prediction dashboard which predicts the possibility of risk.
 
 
 ## Test instructions
