@@ -159,3 +159,4 @@ Implemented features:
 - Demo-mode actions do not persist to PostgreSQL. Do not treat dashboard/model output as field advice.
 
 ## YouTube demonstration
+https://youtu.be/x1fXEyM7alA?si=o3o3N5kMqOq_6tMi
